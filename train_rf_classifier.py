@@ -5,14 +5,15 @@ import pandas as pd
 import random
 import shutil
 import torch
+import time
 
 from classic_models import *
 from interpretation import *
 from os import makedirs, remove
-from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 
 
-def train_lr_model(train_data_filename, test_data_filename, model_dir, random_seed=42,
+def train_rf_model(train_data_filename, test_data_filename, model_dir, n_estimators=100, random_seed=42,
                    max_word_features=5000, max_char_features=10000, rewrite_dir=False):
     '''
     Trains a transformer-like model with usage of the AllenNLP framework.
@@ -47,39 +48,31 @@ def train_lr_model(train_data_filename, test_data_filename, model_dir, random_se
     vectorizer = BigVectorizer(max_word_features, max_char_features)
     
     print("# vectorization started")
-    
     cur_time = time.time()
-    vectorizer.fit_transform(train_clean_text)
-    print('train vectorizer fit time:', time.time() - cur_time)
-    
-    cur_time = time.time()
-    train_vect = vectorizer.transform(train_clean_text)
-    print('train vectorizer transform time:', time.time() - cur_time)
-    
-    cur_time = time.time()
+    train_vect = vectorizer.fit_transform(train_clean_text)
     test_vect = vectorizer.transform(test_clean_text)
-    print('test vectorizer transform time:', time.time() - cur_time)
-    
+    print('vectorization time:', time.time() - cur_time)
     print("# vectorization finished")
     
-    lr_estimator = LogisticRegression(random_state=random_seed, C=3)
+    rf_estimator = RandomForestClassifier(random_state=random_seed, n_estimators=n_estimators)
     print("# training started")
     cur_time = time.time()
-    lr_estimator.fit(train_vect, train_clean_label)
+    rf_estimator.fit(train_vect, train_clean_label)
     print('training time:', time.time() - cur_time)
     print("# training finished")
     
     makedirs(model_dir, exist_ok=True)
-    save_model(lr_estimator, vectorizer, model_dir)
-    evaluate(lr_estimator, train_vect, test_vect, train_clean_label, test_clean_label)
+    save_model(rf_estimator, vectorizer, model_dir)
+    evaluate(rf_estimator, train_vect, test_vect, train_clean_label, test_clean_label)
     
     
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Train a Logistic Regression classifier.')
+    parser = argparse.ArgumentParser(description='Train a SVM classifier.')
     
     parser.add_argument('--train-data-filename', type=str, help='name of the train data file in csv format')
     parser.add_argument('--test-data-filename', type=str, help='name of the test data file in csv format')
     parser.add_argument('--model-dir', type=str, help='directory where to save the model after training')
+    parser.add_argument('--n-estimators', type=int, default=100)
     parser.add_argument('--random-seed', type=int, default=42)
     parser.add_argument('--max-word-features', type=int, default=5000)
     parser.add_argument('--max-char-features', type=int, default=10000)
@@ -90,8 +83,9 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     
-    train_lr_model(
+    train_rf_model(
         args.train_data_filename, args.test_data_filename, args.model_dir,
+        args.n_estimators,
         args.random_seed, args.max_word_features, args.max_char_features,
         args.rewrite_dir
     )

@@ -1,6 +1,7 @@
 import nltk
 import numpy as np
 import pickle
+import time
 
 from nltk import sent_tokenize, word_tokenize, regexp_tokenize
 from nltk.corpus import stopwords
@@ -57,8 +58,13 @@ def load_model(model_dir):
            pickle.loads(open(pathjoin(model_dir, 'vectorizer'), 'rb').read())
 
 def evaluate(predictor, X_train, X_test, y_train, y_test):
+    cur_time = time.time()
     predicted_train = predictor.predict(X_train)
+    print('# train prediction time', time.time() - cur_time)
+    
+    cur_time = time.time()
     predicted_test = predictor.predict(X_test)
+    print('# test prediction time', time.time() - cur_time)
     
     print('accuracy train', accuracy_score(predicted_train, y_train))
     print('accuracy test', accuracy_score(predicted_test, y_test))
